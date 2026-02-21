@@ -21,20 +21,42 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-INSTALL_DIR="/home/pi"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+# Detect actual user home directory (works even when run with sudo)
+if [ -n "$SUDO_USER" ]; then
+    USER_HOME=$(eval echo "~$SUDO_USER")
+elif [ -n "$HOME" ] && [ "$HOME" != "/root" ]; then
+    USER_HOME="$HOME"
+elif [ -d "/home/pi" ]; then
+    USER_HOME="/home/pi"
+else
+    # Use the first non-root user in /home
+    USER_HOME=$(ls -d /home/*/ 2>/dev/null | head -1 | sed 's|/$||')
+    if [ -z "$USER_HOME" ]; then
+        USER_HOME="/root"
+    fi
+fi
+
+INSTALL_DIR="$USER_HOME"
+ACTUAL_USER=$(basename "$USER_HOME")
 
 echo -e "${CYAN}"
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║   PiCar-X 'Okay Robot' — Setup & Installation Script   ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
+echo -e "${CYAN}  Detected user home: $USER_HOME${NC}"
+echo ""
 
 # Check root
 if [ "$EUID" -ne 0 ]; then
     echo -e "${RED}ERROR: Please run as root: sudo bash setup.sh${NC}"
     exit 1
 fi
+
+# Ensure home directory exists
+mkdir -p "$USER_HOME"
 
 # ─── Step 1: System Update ───────────────────────────────────
 echo -e "${YELLOW}[1/8] Updating system packages...${NC}"
@@ -62,7 +84,7 @@ echo -e "${GREEN}[2/8] System dependencies installed.${NC}"
 
 # ─── Step 3: Install robot-hat Module ─────────────────────────
 echo -e "${YELLOW}[3/8] Installing robot-hat module...${NC}"
-cd /home/pi
+cd "$USER_HOME"
 if [ -d "robot-hat" ]; then
     echo "  robot-hat directory exists, pulling latest..."
     cd robot-hat
@@ -89,7 +111,7 @@ echo -e "${GREEN}[3/8] robot-hat installed.${NC}"
 
 # ─── Step 4: Install vilib Module ─────────────────────────────
 echo -e "${YELLOW}[4/8] Installing vilib module...${NC}"
-cd /home/pi
+cd "$USER_HOME"
 if [ -d "vilib" ]; then
     echo "  vilib directory exists, pulling latest..."
     cd vilib
@@ -113,7 +135,7 @@ echo -e "${GREEN}[4/8] vilib installed.${NC}"
 
 # ─── Step 5: Install picar-x Module ──────────────────────────
 echo -e "${YELLOW}[5/8] Installing picar-x module...${NC}"
-cd /home/pi
+cd "$USER_HOME"
 if [ -d "picar-x" ]; then
     echo "  picar-x directory exists, pulling latest..."
     cd picar-x
@@ -138,7 +160,7 @@ echo -e "${GREEN}[5/8] picar-x installed.${NC}"
 
 # ─── Step 6: Enable I2S Amplifier ────────────────────────────
 echo -e "${YELLOW}[6/8] Enabling I2S audio amplifier...${NC}"
-cd /home/pi/robot-hat
+cd "$USER_HOME/robot-hat"
 if [ -f "i2samp.sh" ]; then
     echo "  Running i2samp.sh (you may need to confirm with 'y')..."
     bash i2samp.sh <<< "y" || true
@@ -200,7 +222,7 @@ OKAYEOF
         ;;
 
     config.py)
-        cat > "$dest/config.py" << 'CONFIGEOF'
+        cat > "$dest/config.py" << CONFIGEOF
 #!/usr/bin/env python3
 """PiCar-X 'Okay Robot' — Configuration (auto-generated)."""
 
@@ -243,14 +265,14 @@ CLIFF_REFERENCE = [200, 200, 200]
 LINE_TRACK_SPEED = 10
 LINE_TRACK_OFFSET = 20
 
-SOUND_DIR = "/home/pi/picar-x/sounds"
-MUSIC_DIR = "/home/pi/picar-x/musics"
+SOUND_DIR = "$USER_HOME/picar-x/sounds"
+MUSIC_DIR = "$USER_HOME/picar-x/musics"
 HORN_SOUND = "car-double-horn.wav"
 ENGINE_SOUND = "car-start-engine.wav"
 
 LOG_FILE = "/var/log/okay-robot.log"
 PID_FILE = "/var/run/okay-robot.pid"
-STARTUP_GREETING = f"Hello! I am {ROBOT_NAME}. Say 'okay robot' to wake me up!"
+STARTUP_GREETING = f"Hello! I am \{ROBOT_NAME\}. Say 'okay robot' to wake me up!"
 CONFIGEOF
         echo "  Generated config.py"
         ;;
@@ -331,7 +353,7 @@ ACTIONSEOF
         ;;
 
     okay-robot.service)
-        cat > "$dest" << 'SERVICEEOF'
+        cat > "$dest" << SERVICEEOF
 [Unit]
 Description=PiCar-X "Okay Robot" Voice-Activated Control System
 Documentation=https://docs.sunfounder.com/projects/picar-x-v20/en/latest/
@@ -342,10 +364,10 @@ Wants=network.target
 Type=simple
 User=root
 Group=root
-WorkingDirectory=/home/pi
+WorkingDirectory=$USER_HOME
 ExecStartPre=/bin/sleep 10
-ExecStart=/usr/bin/python3 /home/pi/okay_robot.py
-ExecStop=/bin/kill -SIGTERM $MAINPID
+ExecStart=/usr/bin/python3 $USER_HOME/okay_robot.py
+ExecStop=/bin/kill -SIGTERM \$MAINPID
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal+console
@@ -389,7 +411,7 @@ SECRETEOF
 fi
 
 # Set permissions
-chown -R pi:pi "$INSTALL_DIR" 2>/dev/null || true
+chown -R "$ACTUAL_USER:$ACTUAL_USER" "$INSTALL_DIR" 2>/dev/null || true
 chmod +x "$INSTALL_DIR/okay_robot.py"
 
 # Install systemd service — copy or generate
@@ -400,6 +422,9 @@ else
     echo -e "${YELLOW}  okay-robot.service not found in repo — generating...${NC}"
     generate_file "okay-robot.service" "/etc/systemd/system/okay-robot.service"
 fi
+# Patch paths in service file and config to match actual user home
+sed -i "s|/home/pi|$USER_HOME|g" /etc/systemd/system/okay-robot.service
+sed -i "s|/home/pi|$USER_HOME|g" "$INSTALL_DIR/config.py"
 systemctl daemon-reload
 systemctl enable okay-robot.service
 
@@ -411,10 +436,10 @@ echo -e "${CYAN}╔════════════════════�
 echo "║              Installation Complete!                      ║"
 echo "╠══════════════════════════════════════════════════════════╣"
 echo "║                                                          ║"
-echo "║  Files installed to: /home/pi/                           ║"
-echo "║                                                          ║"
-echo "║  Configuration: /home/pi/config.py                      ║"
-echo "║  API Keys:      /home/pi/secret.py                      ║"
+echo "║  Files installed to: $USER_HOME/"
+echo "║"
+echo "║  Configuration: $USER_HOME/config.py"
+echo "║  API Keys:      $USER_HOME/secret.py"
 echo "║                                                          ║"
 echo "║  Service commands:                                       ║"
 echo "║    sudo systemctl start okay-robot    (start now)        ║"
@@ -424,7 +449,7 @@ echo "║    sudo systemctl status okay-robot   (check status)     ║"
 echo "║    journalctl -u okay-robot -f        (view live logs)   ║"
 echo "║                                                          ║"
 echo "║  Manual run:                                             ║"
-echo "║    cd /home/pi                                            ║"
+echo "║    cd $USER_HOME"
 echo "║    sudo python3 okay_robot.py                            ║"
 echo "║                                                          ║"
 echo "║  Wake word: 'okay robot'                                 ║"
