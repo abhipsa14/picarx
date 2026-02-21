@@ -27,6 +27,18 @@ import threading
 import logging
 from logging.handlers import RotatingFileHandler
 
+# ─── Fix os.getlogin() for systemd services (no TTY) ────────
+# The picarx library calls os.getlogin() which fails under systemd.
+# Monkey-patch it to return a valid username instead.
+_original_getlogin = os.getlogin
+def _safe_getlogin():
+    try:
+        return _original_getlogin()
+    except OSError:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_name
+os.getlogin = _safe_getlogin
+
 # ─── Configuration ───────────────────────────────────────────
 from config import (
     ROBOT_NAME, WAKE_WORDS, WAKE_ENABLED,
