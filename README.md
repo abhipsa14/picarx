@@ -8,6 +8,7 @@ dance, track lines, avoid obstacles, and more — all hands-free.
 
 - **Wake Word Detection** — "okay robot" (offline, via Vosk STT)
 - **Voice Commands** — forward, backward, turn left/right, stop, look around, dance, spin, patrol
+- **Keyboard Control** — real-time arrow-key driving + single-key shortcuts (works over SSH)
 - **Expressive Gestures** — nod, shake head, wave, celebrate, act cute, think, depressed
 - **Autonomous Modes** — line tracking, obstacle avoidance (voice-activated)
 - **Safety Systems** — background ultrasonic obstacle detection + cliff detection
@@ -81,6 +82,50 @@ After reboot, the system starts automatically. You'll hear: *"Hello! I am Robot.
 | "stop mode" | Exit autonomous mode |
 | "sleep" / "goodbye" | Go back to waiting for wake word |
 
+### Keyboard Controls
+
+Keyboard input works alongside voice — no wake word needed. Run interactively via SSH or terminal for keyboard access.
+
+| Key | Action |
+|-----|--------|
+| **Movement** | |
+| `↑` Up Arrow | Forward |
+| `↓` Down Arrow | Backward |
+| `←` Left Arrow | Turn Left |
+| `→` Right Arrow | Turn Right |
+| `Space` | Stop |
+| **Camera** | |
+| `W` | Look Up |
+| `A` | Look Left |
+| `X` | Look Down |
+| `E` | Look Right |
+| `C` | Center Camera |
+| **Gestures & Actions** | |
+| `D` | Dance |
+| `S` | Shake Head |
+| `N` | Nod |
+| `V` | Wave Hands |
+| `B` | Celebrate |
+| `G` | Act Cute |
+| `T` | Think |
+| `P` | Patrol |
+| `O` | Spin Around |
+| `J` | Twist Body |
+| `K` | Depressed / Sad |
+| `R` | Reset Position |
+| **Modes** | |
+| `1` | Line Tracking Mode |
+| `2` | Obstacle Avoidance Mode |
+| `0` | Cancel Autonomous Mode |
+| **Sound** | |
+| `H` | Horn / Honk |
+| **System** | |
+| `Q` / `Esc` | Quit |
+| `?` | Show Help |
+
+> **Note:** Keyboard control auto-disables when running as a systemd service (no TTY).
+> To use keyboard, run manually: `sudo python3 okay_robot.py`
+
 ### Service Management
 
 ```bash
@@ -113,6 +158,7 @@ Edit `/home/pi/config.py` to customize:
 | `TTS_ENGINE` | `"piper"` | TTS engine (`piper` or `espeak`) |
 | `OBSTACLE_AVOIDANCE_ENABLED` | `True` | Background obstacle safety |
 | `CLIFF_DETECTION_ENABLED` | `True` | Background cliff safety |
+| `KEYBOARD_ENABLED` | `True` | Enable keyboard input (auto-off if no TTY) |
 
 ### Enable AI Mode (Optional)
 
@@ -135,6 +181,7 @@ Now the robot uses an LLM to understand natural language and respond conversatio
 picarx/
 ├── okay_robot.py         # Main system — wake word + command loop
 ├── actions.py            # All robot action functions
+├── keyboard_control.py   # Keyboard input handler (arrow keys, shortcuts)
 ├── config.py             # Configuration (wake word, speeds, LLM, etc.)
 ├── setup.sh              # Automated install script
 ├── okay-robot.service    # systemd service unit file

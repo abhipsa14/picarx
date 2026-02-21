@@ -270,6 +270,8 @@ MUSIC_DIR = "$USER_HOME/picar-x/musics"
 HORN_SOUND = "car-double-horn.wav"
 ENGINE_SOUND = "car-start-engine.wav"
 
+KEYBOARD_ENABLED = True
+
 LOG_FILE = "/var/log/okay-robot.log"
 PID_FILE = "/var/run/okay-robot.pid"
 STARTUP_GREETING = f"Hello! I am \{ROBOT_NAME\}. Say 'okay robot' to wake me up!"
@@ -352,6 +354,24 @@ ACTIONSEOF
         fi
         ;;
 
+    keyboard_control.py)
+        echo "  Downloading keyboard_control.py from GitHub repo..."
+        curl -fsSL "https://raw.githubusercontent.com/$(cd "$SCRIPT_DIR" && git remote get-url origin 2>/dev/null | sed 's|.*github.com[:/]||;s|\.git$||')/main/keyboard_control.py" \
+            -o "$dest/keyboard_control.py" 2>/dev/null
+        if [ $? -ne 0 ] || [ ! -s "$dest/keyboard_control.py" ]; then
+            echo -e "${RED}  Could not download keyboard_control.py. Creating placeholder.${NC}"
+            cat > "$dest/keyboard_control.py" << 'KBEOF'
+#!/usr/bin/env python3
+"""Keyboard control placeholder — download the full version from the project repo."""
+import logging
+logger = logging.getLogger("okay-robot")
+def start_keyboard_thread(*args, **kwargs):
+    logger.info("Keyboard control: placeholder module. Download the full keyboard_control.py.")
+    return None
+KBEOF
+        fi
+        ;;
+
     okay-robot.service)
         cat > "$dest" << SERVICEEOF
 [Unit]
@@ -396,6 +416,7 @@ SERVICEEOF
 copy_or_generate "okay_robot.py" "$INSTALL_DIR"
 copy_or_generate "config.py" "$INSTALL_DIR"
 copy_or_generate "actions.py" "$INSTALL_DIR"
+copy_or_generate "keyboard_control.py" "$INSTALL_DIR"
 
 # Create secret.py template if it doesn't exist
 if [ ! -f "$INSTALL_DIR/secret.py" ]; then

@@ -83,6 +83,11 @@ HORN_SOUND = "car-double-horn.wav"
 ENGINE_SOUND = "car-start-engine.wav"
 
 # ─────────────────────────────────────────────────────────────
+# KEYBOARD CONTROL
+# ─────────────────────────────────────────────────────────────
+KEYBOARD_ENABLED = True         # Enable keyboard input (auto-disables if no TTY)
+
+# ─────────────────────────────────────────────────────────────
 # SYSTEM / SERVICE
 # ─────────────────────────────────────────────────────────────
 LOG_FILE = "/var/log/okay-robot.log"

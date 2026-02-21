@@ -53,8 +53,10 @@ from config import (
     LINE_TRACK_SPEED, LINE_TRACK_OFFSET,
     SOUND_DIR, MUSIC_DIR, HORN_SOUND, ENGINE_SOUND,
     LOG_FILE, PID_FILE, STARTUP_GREETING,
+    KEYBOARD_ENABLED,
 )
 from actions import ACTIONS_DICT, execute_actions, reset_position
+from keyboard_control import start_keyboard_thread
 
 # ─── Logging Setup ───────────────────────────────────────────
 logger = logging.getLogger("okay-robot")
@@ -609,6 +611,26 @@ def main():
     time.sleep(1)
     say(tts, STARTUP_GREETING)
     logger.info("System ready. Waiting for wake word...")
+
+    # ─── Start keyboard control thread ───
+    if KEYBOARD_ENABLED:
+        def _start_line_tracking():
+            t = threading.Thread(target=line_tracking_loop, args=(car,), daemon=True)
+            t.start()
+
+        def _start_obstacle_avoidance():
+            t = threading.Thread(target=obstacle_avoid_loop, args=(car,), daemon=True)
+            t.start()
+
+        start_keyboard_thread(
+            car=car,
+            state=state,
+            tts_func=lambda text: say(tts, text),
+            play_sound_func=play_sound,
+            music=music,
+            start_line_tracking=_start_line_tracking,
+            start_obstacle_avoidance=_start_obstacle_avoidance,
+        )
 
     # Choose command processor
     process_command = process_command_llm if (LLM_ENABLED and llm) else process_command_keyword
