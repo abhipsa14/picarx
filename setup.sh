@@ -65,12 +65,26 @@ echo -e "${YELLOW}[3/8] Installing robot-hat module...${NC}"
 cd /home/pi
 if [ -d "robot-hat" ]; then
     echo "  robot-hat directory exists, pulling latest..."
-    cd robot-hat && git pull || true
+    cd robot-hat
+    git pull || true
 else
     git clone -b 2.5.x https://github.com/sunfounder/robot-hat.git --depth 1
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}  Failed to clone robot-hat. Retrying without branch...${NC}"
+        git clone https://github.com/sunfounder/robot-hat.git --depth 1 || {
+            echo -e "${RED}  ERROR: Could not clone robot-hat. Check your internet connection.${NC}"
+            exit 1
+        }
+    fi
     cd robot-hat
 fi
-python3 install.py
+if [ -f "install.py" ]; then
+    sudo python3 install.py
+elif [ -f "setup.py" ]; then
+    sudo python3 setup.py install
+else
+    sudo pip3 install . --break-system-packages 2>/dev/null || sudo pip3 install .
+fi
 echo -e "${GREEN}[3/8] robot-hat installed.${NC}"
 
 # ─── Step 4: Install vilib Module ─────────────────────────────
@@ -78,12 +92,23 @@ echo -e "${YELLOW}[4/8] Installing vilib module...${NC}"
 cd /home/pi
 if [ -d "vilib" ]; then
     echo "  vilib directory exists, pulling latest..."
-    cd vilib && git pull || true
+    cd vilib
+    git pull || true
 else
     git clone https://github.com/sunfounder/vilib.git --depth 1
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}  ERROR: Could not clone vilib. Check your internet connection.${NC}"
+        exit 1
+    fi
     cd vilib
 fi
-python3 install.py
+if [ -f "install.py" ]; then
+    sudo python3 install.py
+elif [ -f "setup.py" ]; then
+    sudo python3 setup.py install
+else
+    sudo pip3 install . --break-system-packages 2>/dev/null || sudo pip3 install .
+fi
 echo -e "${GREEN}[4/8] vilib installed.${NC}"
 
 # ─── Step 5: Install picar-x Module ──────────────────────────
@@ -91,12 +116,24 @@ echo -e "${YELLOW}[5/8] Installing picar-x module...${NC}"
 cd /home/pi
 if [ -d "picar-x" ]; then
     echo "  picar-x directory exists, pulling latest..."
-    cd picar-x && git pull || true
+    cd picar-x
+    git pull || true
 else
     git clone -b 2.1.x https://github.com/sunfounder/picar-x.git --depth 1
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}  Failed to clone picar-x. Retrying without branch...${NC}"
+        git clone https://github.com/sunfounder/picar-x.git --depth 1 || {
+            echo -e "${RED}  ERROR: Could not clone picar-x. Check your internet connection.${NC}"
+            exit 1
+        }
+    fi
     cd picar-x
 fi
-pip3 install . --break-system-packages 2>/dev/null || pip3 install .
+if [ -f "install.py" ]; then
+    sudo python3 install.py
+else
+    sudo pip3 install . --break-system-packages 2>/dev/null || sudo pip3 install .
+fi
 echo -e "${GREEN}[5/8] picar-x installed.${NC}"
 
 # ─── Step 6: Enable I2S Amplifier ────────────────────────────
