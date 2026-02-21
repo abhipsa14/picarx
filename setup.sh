@@ -174,7 +174,8 @@ echo -e "${YELLOW}[7/8] Installing Python dependencies (Vosk, etc.)...${NC}"
 pip3 install --break-system-packages vosk 2>/dev/null || pip3 install vosk
 pip3 install --break-system-packages sounddevice 2>/dev/null || pip3 install sounddevice
 pip3 install --break-system-packages readchar 2>/dev/null || pip3 install readchar
-echo -e "${GREEN}[7/8] Python dependencies installed.${NC}"
+pip3 install --break-system-packages evdev 2>/dev/null || pip3 install evdev
+echo -e "${GREEN}[7/8] Python dependencies installed (vosk, sounddevice, readchar, evdev).${NC}"
 
 # ─── Step 8: Deploy Okay Robot System ────────────────────────
 echo -e "${YELLOW}[8/8] Deploying Okay Robot system...${NC}"

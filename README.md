@@ -36,6 +36,7 @@ sudo bash setup.sh
 ```
 
 The setup script will:
+
 1. Update system packages
 2. Install `robot-hat`, `vilib`, and `picar-x` modules
 3. Enable the I2S audio amplifier
@@ -123,8 +124,11 @@ Keyboard input works alongside voice — no wake word needed. Run interactively 
 | `Q` / `Esc` | Quit |
 | `?` | Show Help |
 
-> **Note:** Keyboard control auto-disables when running as a systemd service (no TTY).
-> To use keyboard, run manually: `sudo python3 okay_robot.py`
+> **Note:** Keyboard control works in two modes:
+> - **TTY mode** — when running interactively via SSH or terminal (uses raw terminal input)
+> - **evdev mode** — when running as a systemd service (reads directly from USB keyboard via `/dev/input/`)
+>
+> Plug in a USB keyboard to the Pi for keyboard control under systemd. The system auto-detects and hotplug-reconnects.
 
 ### Service Management
 

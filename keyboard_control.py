@@ -3,8 +3,15 @@
 PiCar-X "Okay Robot" — Keyboard Control Module
 ================================================
 Provides real-time keyboard control alongside voice commands.
-Uses Linux terminal raw input (tty/termios) so it works over SSH
-and also under systemd when a TTY is available.
+
+Two input backends:
+  1. **TTY mode** — raw terminal input via tty/termios (SSH, interactive shell)
+  2. **evdev mode** — reads /dev/input directly (systemd service, no TTY needed)
+
+The module auto-selects the best backend:
+  - If a TTY is detected → uses TTY mode
+  - If no TTY but evdev is available → uses evdev mode (reads physical keyboard)
+  - If neither works → keyboard control is disabled (voice-only)
 
 Key Bindings:
   ───── Movement ─────
@@ -57,7 +64,7 @@ import time
 logger = logging.getLogger("okay-robot")
 
 # ─────────────────────────────────────────────────────────────
-# ESCAPE SEQUENCE CONSTANTS
+# ESCAPE SEQUENCE CONSTANTS (TTY mode)
 # ─────────────────────────────────────────────────────────────
 KEY_UP    = "\x1b[A"
 KEY_DOWN  = "\x1b[B"
@@ -67,9 +74,8 @@ KEY_ESC   = "\x1b"
 KEY_SPACE = " "
 
 # ─────────────────────────────────────────────────────────────
-# KEY → ACTION MAPPING
+# KEY → ACTION MAPPING (TTY mode — escape sequences & chars)
 # ─────────────────────────────────────────────────────────────
-# Each entry: key -> (action_name, display_label)
 KEY_MAP = {
     # Movement
     KEY_UP:    ("forward",       "↑  Forward"),
@@ -111,59 +117,112 @@ KEY_MAP = {
     "?":       ("help",          "?  Show Help"),
 }
 
+# ─────────────────────────────────────────────────────────────
+# EVDEV KEY CODE → ACTION MAPPING (systemd / no-TTY mode)
+# ─────────────────────────────────────────────────────────────
+# Linux input event key codes (see linux/input-event-codes.h)
+EVDEV_KEY_MAP = {
+    # Movement — arrow keys
+    103: ("forward",       "↑  Forward"),        # KEY_UP
+    108: ("backward",      "↓  Backward"),       # KEY_DOWN
+    105: ("turn_left",     "←  Turn Left"),      # KEY_LEFT
+    106: ("turn_right",    "→  Turn Right"),      # KEY_RIGHT
+    57:  ("stop",          "⎵  Stop"),            # KEY_SPACE
+
+    # Camera
+    17:  ("look_up",       "W  Look Up"),         # KEY_W
+    30:  ("look_left",     "A  Look Left"),       # KEY_A
+    45:  ("look_down",     "X  Look Down"),       # KEY_X
+    18:  ("look_right",    "E  Look Right"),      # KEY_E
+    46:  ("look_center",   "C  Center Camera"),   # KEY_C
+
+    # Gestures & Actions
+    32:  ("dance",         "D  Dance"),           # KEY_D
+    31:  ("shake_head",    "S  Shake Head"),      # KEY_S
+    49:  ("nod",           "N  Nod"),             # KEY_N
+    47:  ("wave_hands",    "V  Wave Hands"),      # KEY_V
+    48:  ("celebrate",     "B  Celebrate"),       # KEY_B
+    34:  ("act_cute",      "G  Act Cute"),        # KEY_G
+    20:  ("think",         "T  Think"),           # KEY_T
+    25:  ("patrol",        "P  Patrol"),          # KEY_P
+    24:  ("spin_around",   "O  Spin Around"),     # KEY_O
+    36:  ("twist_body",    "J  Twist Body"),      # KEY_J
+    37:  ("depressed",     "K  Depressed"),       # KEY_K
+    19:  ("reset",         "R  Reset Position"),  # KEY_R
+
+    # Sound
+    35:  ("horn",          "H  Horn / Honk"),     # KEY_H
+
+    # Modes
+    2:   ("mode_line",     "1  Line Tracking"),   # KEY_1
+    3:   ("mode_obstacle", "2  Obstacle Avoid"),  # KEY_2
+    11:  ("mode_cancel",   "0  Cancel Mode"),     # KEY_0
+
+    # System
+    16:  ("quit",          "Q  Quit"),            # KEY_Q
+    1:   ("quit",          "Esc  Quit"),          # KEY_ESC
+}
+
 
 def print_help():
     """Print keyboard control help to console."""
-    print("\n╔══════════════════════════════════════════════╗")
-    print("║       KEYBOARD CONTROLS  (Okay Robot)       ║")
-    print("╠══════════════════════════════════════════════╣")
-    print("║  MOVEMENT                                   ║")
-    print("║    ↑  Up Arrow ........ Forward              ║")
-    print("║    ↓  Down Arrow ...... Backward             ║")
-    print("║    ←  Left Arrow ...... Turn Left            ║")
-    print("║    →  Right Arrow ..... Turn Right           ║")
-    print("║    Space .............. Stop                 ║")
-    print("║                                              ║")
-    print("║  CAMERA                                      ║")
-    print("║    W .................. Look Up               ║")
-    print("║    A .................. Look Left             ║")
-    print("║    X .................. Look Down             ║")
-    print("║    E .................. Look Right            ║")
-    print("║    C .................. Center Camera         ║")
-    print("║                                              ║")
-    print("║  GESTURES & ACTIONS                          ║")
-    print("║    D .................. Dance                 ║")
-    print("║    S .................. Shake Head            ║")
-    print("║    N .................. Nod                   ║")
-    print("║    V .................. Wave Hands            ║")
-    print("║    B .................. Celebrate             ║")
-    print("║    G .................. Act Cute              ║")
-    print("║    T .................. Think                 ║")
-    print("║    P .................. Patrol                ║")
-    print("║    O .................. Spin Around           ║")
-    print("║    J .................. Twist Body            ║")
-    print("║    K .................. Depressed / Sad       ║")
-    print("║    R .................. Reset Position        ║")
-    print("║                                              ║")
-    print("║  MODES                                       ║")
-    print("║    1 .................. Line Tracking         ║")
-    print("║    2 .................. Obstacle Avoidance    ║")
-    print("║    0 .................. Cancel Mode           ║")
-    print("║                                              ║")
-    print("║  SOUND                                       ║")
-    print("║    H .................. Horn / Honk           ║")
-    print("║                                              ║")
-    print("║  SYSTEM                                      ║")
-    print("║    Q / Esc ............ Quit                  ║")
-    print("║    ? .................. This Help             ║")
-    print("╚══════════════════════════════════════════════╝\n")
+    msg = """
+╔══════════════════════════════════════════════╗
+║       KEYBOARD CONTROLS  (Okay Robot)       ║
+╠══════════════════════════════════════════════╣
+║  MOVEMENT                                   ║
+║    ↑  Up Arrow ........ Forward              ║
+║    ↓  Down Arrow ...... Backward             ║
+║    ←  Left Arrow ...... Turn Left            ║
+║    →  Right Arrow ..... Turn Right           ║
+║    Space .............. Stop                 ║
+║                                              ║
+║  CAMERA                                      ║
+║    W .................. Look Up               ║
+║    A .................. Look Left             ║
+║    X .................. Look Down             ║
+║    E .................. Look Right            ║
+║    C .................. Center Camera         ║
+║                                              ║
+║  GESTURES & ACTIONS                          ║
+║    D .................. Dance                 ║
+║    S .................. Shake Head            ║
+║    N .................. Nod                   ║
+║    V .................. Wave Hands            ║
+║    B .................. Celebrate             ║
+║    G .................. Act Cute              ║
+║    T .................. Think                 ║
+║    P .................. Patrol                ║
+║    O .................. Spin Around           ║
+║    J .................. Twist Body            ║
+║    K .................. Depressed / Sad       ║
+║    R .................. Reset Position        ║
+║                                              ║
+║  MODES                                       ║
+║    1 .................. Line Tracking         ║
+║    2 .................. Obstacle Avoidance    ║
+║    0 .................. Cancel Mode           ║
+║                                              ║
+║  SOUND                                       ║
+║    H .................. Horn / Honk           ║
+║                                              ║
+║  SYSTEM                                      ║
+║    Q / Esc ............ Quit                  ║
+║    ? .................. This Help             ║
+╚══════════════════════════════════════════════╝
+"""
+    logger.info(msg)
+    print(msg)
 
+
+# ═════════════════════════════════════════════════════════════
+# BACKEND 1: TTY MODE (terminal / SSH)
+# ═════════════════════════════════════════════════════════════
 
 def _read_key():
     """
     Read a single keypress from stdin (Linux raw terminal mode).
     Returns the key as a string. Arrow keys return escape sequences.
-    Returns None if reading fails (no TTY available).
     """
     import tty
     import termios
@@ -173,42 +232,20 @@ def _read_key():
     try:
         tty.setraw(fd)
         ch = sys.stdin.read(1)
-        # If escape sequence, read more chars
         if ch == "\x1b":
             ch2 = sys.stdin.read(1)
             if ch2 == "[":
                 ch3 = sys.stdin.read(1)
                 return "\x1b[" + ch3
-            return KEY_ESC  # Plain Escape
+            return KEY_ESC
         return ch
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-def keyboard_listener(car, state, tts_func, play_sound_func, music,
-                      start_line_tracking, start_obstacle_avoidance):
-    """
-    Background thread that reads keyboard input and dispatches actions.
-
-    Args:
-        car:                   Picarx instance
-        state:                 RobotState shared state
-        tts_func:              say(tts, text) callable — pass as lambda
-        play_sound_func:       play_sound(music, file) callable
-        music:                 Music instance
-        start_line_tracking:   Callable to start line tracking mode
-        start_obstacle_avoidance: Callable to start obstacle avoidance mode
-    """
-    from actions import ACTIONS_DICT, reset_position
-
-    # Check if we have a real TTY
-    if not _has_tty():
-        logger.info("Keyboard control: No TTY detected (systemd service). "
-                     "Keyboard input disabled. Use voice commands or SSH to "
-                     "run interactively for keyboard control.")
-        return
-
-    logger.info("Keyboard control active. Press '?' for help.")
+def _tty_listener(car, state, dispatch_action):
+    """TTY-based keyboard listener (interactive terminal / SSH)."""
+    logger.info("Keyboard control active (TTY mode). Press '?' for help.")
     print_help()
 
     while state.running:
@@ -220,77 +257,231 @@ def keyboard_listener(car, state, tts_func, play_sound_func, music,
 
             key_lower = key.lower() if len(key) == 1 else key
 
-            # ─── Quit ───
+            # Quit
             if key_lower in ("q", KEY_ESC):
                 logger.info("Keyboard: Quit requested.")
                 state.running = False
                 os.kill(os.getpid(), __import__('signal').SIGTERM)
                 break
 
-            # ─── Help ───
+            # Help
             if key_lower == "?":
                 print_help()
                 continue
 
-            # ─── Lookup in KEY_MAP ───
-            if key_lower not in KEY_MAP and key not in KEY_MAP:
+            # Lookup
+            entry = KEY_MAP.get(key_lower) or KEY_MAP.get(key)
+            if not entry:
                 continue
 
-            action_name, label = KEY_MAP.get(key_lower) or KEY_MAP.get(key)
-            logger.info("Keyboard: [%s] → %s", label, action_name)
-
-            # ── Mode commands ──
-            if action_name == "mode_line":
-                with state.lock:
-                    state.autonomous_mode = "line_track"
-                start_line_tracking()
-                print("[MODE] Line Tracking started. Press 0 to cancel.")
-                continue
-
-            if action_name == "mode_obstacle":
-                with state.lock:
-                    state.autonomous_mode = "obstacle_avoid"
-                start_obstacle_avoidance()
-                print("[MODE] Obstacle Avoidance started. Press 0 to cancel.")
-                continue
-
-            if action_name == "mode_cancel":
-                with state.lock:
-                    state.autonomous_mode = None
-                car.stop()
-                car.set_dir_servo_angle(0)
-                print("[MODE] Autonomous mode cancelled.")
-                continue
-
-            # ── Horn ──
-            if action_name == "horn":
-                from config import HORN_SOUND
-                play_sound_func(music, HORN_SOUND)
-                print("[SOUND] Honk!")
-                continue
-
-            # ── Action from ACTIONS_DICT ──
-            # Map underscore names to space-separated for dict lookup
-            lookup_name = action_name.replace("_", " ")
-            if lookup_name in ACTIONS_DICT:
-                print(f"[ACTION] {label}")
-                ACTIONS_DICT[lookup_name](car)
-            elif action_name in ACTIONS_DICT:
-                print(f"[ACTION] {label}")
-                ACTIONS_DICT[action_name](car)
-            else:
-                print(f"[UNKNOWN] {action_name}")
+            action_name, label = entry
+            dispatch_action(action_name, label)
 
         except Exception as e:
-            # If terminal goes away (e.g. SSH disconnect), gracefully stop
             if "I/O" in str(e) or "Errno 5" in str(e) or "Input/output" in str(e):
-                logger.info("Keyboard: Terminal disconnected. Keyboard input disabled.")
+                logger.info("Keyboard: Terminal disconnected. TTY mode disabled.")
                 break
-            logger.error("Keyboard input error: %s", e)
+            logger.error("Keyboard (TTY) error: %s", e)
             time.sleep(0.5)
 
-    logger.info("Keyboard listener stopped.")
+    logger.info("TTY keyboard listener stopped.")
 
+
+# ═════════════════════════════════════════════════════════════
+# BACKEND 2: EVDEV MODE (systemd service / no TTY)
+# ═════════════════════════════════════════════════════════════
+
+def _find_keyboard_device():
+    """
+    Find a keyboard input device in /dev/input/ using evdev.
+    Returns the device path or None.
+    """
+    try:
+        import evdev
+    except ImportError:
+        return None
+
+    devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+    for device in devices:
+        capabilities = device.capabilities(verbose=True)
+        # Look for devices that have EV_KEY with typical keyboard keys
+        for cap_type, events in capabilities.items():
+            if cap_type[0] == "EV_KEY":
+                # Check for common keyboard keys (KEY_A=30, KEY_SPACE=57, KEY_UP=103)
+                event_codes = [e[0][1] if isinstance(e[0], tuple) else e[0] for e in events]
+                if 30 in event_codes and 57 in event_codes:
+                    logger.info("Keyboard device found: %s (%s)", device.path, device.name)
+                    return device.path
+    return None
+
+
+def _evdev_listener(car, state, dispatch_action):
+    """
+    evdev-based keyboard listener — reads directly from /dev/input/.
+    Works under systemd without any TTY. Requires root and the `evdev` package.
+    """
+    try:
+        import evdev
+    except ImportError:
+        logger.warning("Keyboard (evdev): python3-evdev not installed. "
+                       "Install with: sudo pip3 install evdev")
+        return
+
+    dev_path = _find_keyboard_device()
+    if not dev_path:
+        logger.info("Keyboard (evdev): No keyboard device found in /dev/input/. "
+                     "Plug in a USB keyboard to use keyboard control.")
+        # Keep checking periodically for a keyboard to be plugged in
+        _evdev_hotplug_loop(state, dispatch_action)
+        return
+
+    logger.info("Keyboard control active (evdev mode: %s).", dev_path)
+
+    try:
+        import evdev
+        device = evdev.InputDevice(dev_path)
+        # Don't grab exclusively — let other processes also read
+        logger.info("Listening for keyboard events on %s (%s)...", device.path, device.name)
+
+        for event in device.read_loop():
+            if not state.running:
+                break
+
+            # Only handle key-down events (value=1), skip repeats (value=2)
+            if event.type != evdev.ecodes.EV_KEY or event.value != 1:
+                continue
+
+            entry = EVDEV_KEY_MAP.get(event.code)
+            if not entry:
+                continue
+
+            action_name, label = entry
+
+            # Quit
+            if action_name == "quit":
+                logger.info("Keyboard (evdev): Quit requested.")
+                state.running = False
+                os.kill(os.getpid(), __import__('signal').SIGTERM)
+                break
+
+            dispatch_action(action_name, label)
+
+    except OSError as e:
+        logger.warning("Keyboard (evdev) device error: %s. Device may have been unplugged.", e)
+        # Try hotplug loop to wait for reconnection
+        if state.running:
+            _evdev_hotplug_loop(state, dispatch_action)
+    except Exception as e:
+        logger.error("Keyboard (evdev) error: %s", e)
+
+    logger.info("evdev keyboard listener stopped.")
+
+
+def _evdev_hotplug_loop(state, dispatch_action):
+    """
+    Periodically check for a keyboard device to appear (USB hotplug).
+    When found, start the evdev listener for it.
+    """
+    logger.info("Keyboard (evdev): Waiting for USB keyboard to be plugged in...")
+    while state.running:
+        time.sleep(5)
+        dev_path = _find_keyboard_device()
+        if dev_path:
+            logger.info("Keyboard (evdev): Device detected! Starting listener.")
+            # Import here to avoid top-level import issues
+            import evdev
+            try:
+                device = evdev.InputDevice(dev_path)
+                for event in device.read_loop():
+                    if not state.running:
+                        return
+
+                    if event.type != evdev.ecodes.EV_KEY or event.value != 1:
+                        continue
+
+                    entry = EVDEV_KEY_MAP.get(event.code)
+                    if not entry:
+                        continue
+
+                    action_name, label = entry
+                    if action_name == "quit":
+                        logger.info("Keyboard (evdev): Quit requested.")
+                        state.running = False
+                        os.kill(os.getpid(), __import__('signal').SIGTERM)
+                        return
+
+                    dispatch_action(action_name, label)
+
+            except OSError:
+                logger.warning("Keyboard (evdev): Device disconnected. Waiting for reconnect...")
+                continue
+            except Exception as e:
+                logger.error("Keyboard (evdev) hotplug error: %s", e)
+                continue
+
+
+# ═════════════════════════════════════════════════════════════
+# COMMON DISPATCH LOGIC
+# ═════════════════════════════════════════════════════════════
+
+def _make_dispatcher(car, state, play_sound_func, music,
+                     start_line_tracking, start_obstacle_avoidance):
+    """
+    Create a dispatch_action(action_name, label) function that executes
+    the robot action. Shared between TTY and evdev backends.
+    """
+    from actions import ACTIONS_DICT
+
+    def dispatch_action(action_name, label):
+        logger.info("Keyboard: [%s] → %s", label, action_name)
+
+        # Mode commands
+        if action_name == "mode_line":
+            with state.lock:
+                state.autonomous_mode = "line_track"
+            start_line_tracking()
+            logger.info("[MODE] Line Tracking started. Press 0 to cancel.")
+            return
+
+        if action_name == "mode_obstacle":
+            with state.lock:
+                state.autonomous_mode = "obstacle_avoid"
+            start_obstacle_avoidance()
+            logger.info("[MODE] Obstacle Avoidance started. Press 0 to cancel.")
+            return
+
+        if action_name == "mode_cancel":
+            with state.lock:
+                state.autonomous_mode = None
+            car.stop()
+            car.set_dir_servo_angle(0)
+            logger.info("[MODE] Autonomous mode cancelled.")
+            return
+
+        # Horn
+        if action_name == "horn":
+            from config import HORN_SOUND
+            play_sound_func(music, HORN_SOUND)
+            logger.info("[SOUND] Honk!")
+            return
+
+        # Action from ACTIONS_DICT
+        lookup_name = action_name.replace("_", " ")
+        if lookup_name in ACTIONS_DICT:
+            logger.info("[ACTION] %s", label)
+            ACTIONS_DICT[lookup_name](car)
+        elif action_name in ACTIONS_DICT:
+            logger.info("[ACTION] %s", label)
+            ACTIONS_DICT[action_name](car)
+        else:
+            logger.warning("[UNKNOWN] %s", action_name)
+
+    return dispatch_action
+
+
+# ═════════════════════════════════════════════════════════════
+# PUBLIC API
+# ═════════════════════════════════════════════════════════════
 
 def _has_tty():
     """Check if stdin is a real terminal (TTY)."""
@@ -300,11 +491,39 @@ def _has_tty():
         return False
 
 
+def _has_evdev():
+    """Check if evdev is available."""
+    try:
+        import evdev
+        return True
+    except ImportError:
+        return False
+
+
+def keyboard_listener(car, state, tts_func, play_sound_func, music,
+                      start_line_tracking, start_obstacle_avoidance):
+    """
+    Main keyboard listener — auto-selects TTY or evdev backend.
+    """
+    dispatch = _make_dispatcher(car, state, play_sound_func, music,
+                                start_line_tracking, start_obstacle_avoidance)
+
+    if _has_tty():
+        _tty_listener(car, state, dispatch)
+    elif _has_evdev():
+        logger.info("No TTY detected — using evdev for keyboard input (systemd mode).")
+        _evdev_listener(car, state, dispatch)
+    else:
+        logger.info("Keyboard control: No TTY and evdev not installed. "
+                     "Keyboard input disabled. To enable under systemd, "
+                     "install evdev: sudo pip3 install evdev")
+
+
 def start_keyboard_thread(car, state, tts_func, play_sound_func, music,
                           start_line_tracking, start_obstacle_avoidance):
     """
     Start the keyboard listener in a daemon thread.
-    Safe to call even when no TTY is available — it will simply log and return.
+    Auto-selects TTY or evdev backend. Safe to call in any environment.
     """
     t = threading.Thread(
         target=keyboard_listener,
