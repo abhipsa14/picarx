@@ -19,5 +19,5 @@ rm -f /var/run/okay-robot.pid
 
 echo ""
 echo "Service uninstalled."
-echo "Project files at /home/pi/okay-robot/ were NOT removed."
-echo "To remove them: rm -rf /home/pi/okay-robot"
+echo "Project files at /home/pi/ were NOT removed."
+echo "To remove them manually: rm /home/pi/okay_robot.py /home/pi/config.py /home/pi/actions.py /home/pi/secret.py"

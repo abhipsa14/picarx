@@ -39,7 +39,7 @@ The setup script will:
 2. Install `robot-hat`, `vilib`, and `picar-x` modules
 3. Enable the I2S audio amplifier
 4. Install Vosk STT and dependencies
-5. Deploy files to `/home/pi/okay-robot/`
+5. Deploy files to `/home/pi/`
 6. Register and enable the systemd auto-start service
 7. Prompt for reboot
 
@@ -94,13 +94,13 @@ journalctl -u okay-robot -f          # View live logs
 ### Manual Run (for testing)
 
 ```bash
-cd /home/pi/okay-robot
+cd /home/pi
 sudo python3 okay_robot.py
 ```
 
 ## Configuration
 
-Edit `/home/pi/okay-robot/config.py` to customize:
+Edit `/home/pi/config.py` to customize:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -116,7 +116,7 @@ Edit `/home/pi/okay-robot/config.py` to customize:
 
 ### Enable AI Mode (Optional)
 
-1. Edit `/home/pi/okay-robot/secret.py`:
+1. Edit `/home/pi/secret.py`:
    ```python
    LLM_API_KEY = "sk-your-openai-api-key-here"
    ```
