@@ -50,73 +50,73 @@ def stop(car):
 
 def look_left(car, angle=60):
     """Pan camera left."""
-    car.set_camera_servo1_angle(angle)
+    car.set_cam_pan_angle(angle)
     time.sleep(0.5)
 
 def look_right(car, angle=60):
     """Pan camera right."""
-    car.set_camera_servo1_angle(-angle)
+    car.set_cam_pan_angle(-angle)
     time.sleep(0.5)
 
 def look_up(car, angle=30):
     """Tilt camera up."""
-    car.set_camera_servo2_angle(angle)
+    car.set_cam_tilt_angle(angle)
     time.sleep(0.5)
 
 def look_down(car, angle=30):
     """Tilt camera down."""
-    car.set_camera_servo2_angle(-angle)
+    car.set_cam_tilt_angle(-angle)
     time.sleep(0.5)
 
 def look_center(car):
     """Center the camera."""
-    car.set_camera_servo1_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_pan_angle(0)
+    car.set_cam_tilt_angle(0)
     time.sleep(0.3)
 
 def shake_head(car):
     """Shake head gesture — 'no'."""
     for angle in [30, -30, 20, -20, 10, -10, 0]:
-        car.set_camera_servo1_angle(angle)
+        car.set_cam_pan_angle(angle)
         time.sleep(0.12)
-    car.set_camera_servo1_angle(0)
+    car.set_cam_pan_angle(0)
 
 def nod(car):
     """Nod gesture — 'yes'."""
     for angle in [20, -10, 15, -5, 0]:
-        car.set_camera_servo2_angle(angle)
+        car.set_cam_tilt_angle(angle)
         time.sleep(0.2)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def wave_hands(car):
     """Playful wave using steering servo as 'arms'."""
-    car.set_camera_servo2_angle(15)
+    car.set_cam_tilt_angle(15)
     for _ in range(2):
         car.set_dir_servo_angle(25)
         time.sleep(0.25)
         car.set_dir_servo_angle(-25)
         time.sleep(0.25)
     car.set_dir_servo_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def resist(car):
     """Refuse/defensive motion."""
-    car.set_camera_servo2_angle(10)
+    car.set_cam_tilt_angle(10)
     for _ in range(3):
         car.set_dir_servo_angle(15)
-        car.set_camera_servo1_angle(15)
+        car.set_cam_pan_angle(15)
         time.sleep(0.15)
         car.set_dir_servo_angle(-15)
-        car.set_camera_servo1_angle(-15)
+        car.set_cam_pan_angle(-15)
         time.sleep(0.15)
     car.stop()
     car.set_dir_servo_angle(0)
-    car.set_camera_servo1_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_pan_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def act_cute(car):
     """Bouncy 'cute' move with micro-shuffles."""
-    car.set_camera_servo2_angle(-15)
+    car.set_cam_tilt_angle(-15)
     time.sleep(0.2)
     for _ in range(3):
         car.forward(15)
@@ -127,7 +127,7 @@ def act_cute(car):
         time.sleep(0.1)
         car.stop()
         time.sleep(0.05)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def rub_hands(car):
     """Mimics rubbing hands together via steering oscillation."""
@@ -140,15 +140,15 @@ def rub_hands(car):
 
 def think(car):
     """Thinking animation — smooth pan + tilt."""
-    car.set_camera_servo1_angle(-30)
-    car.set_camera_servo2_angle(-10)
+    car.set_cam_pan_angle(-30)
+    car.set_cam_tilt_angle(-10)
     car.set_dir_servo_angle(15)
     time.sleep(1.0)
-    car.set_camera_servo1_angle(-15)
+    car.set_cam_pan_angle(-15)
     time.sleep(0.5)
     car.set_dir_servo_angle(0)
-    car.set_camera_servo1_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_pan_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def twist_body(car):
     """Body twist — alternating forward/backward with pan/steer."""
@@ -156,40 +156,40 @@ def twist_body(car):
         car.forward(15)
         time.sleep(0.15)
         car.stop()
-        car.set_camera_servo1_angle(20)
+        car.set_cam_pan_angle(20)
         car.set_dir_servo_angle(-15)
         time.sleep(0.15)
         car.backward(15)
         time.sleep(0.15)
         car.stop()
-        car.set_camera_servo1_angle(-20)
+        car.set_cam_pan_angle(-20)
         car.set_dir_servo_angle(15)
         time.sleep(0.15)
     car.stop()
     car.set_dir_servo_angle(0)
-    car.set_camera_servo1_angle(0)
+    car.set_cam_pan_angle(0)
 
 def celebrate(car):
     """Festive celebration flourish."""
-    car.set_camera_servo2_angle(20)
+    car.set_cam_tilt_angle(20)
     for _ in range(2):
-        car.set_camera_servo1_angle(-30)
+        car.set_cam_pan_angle(-30)
         car.set_dir_servo_angle(-20)
         time.sleep(0.2)
-        car.set_camera_servo1_angle(30)
+        car.set_cam_pan_angle(30)
         car.set_dir_servo_angle(20)
         time.sleep(0.2)
-    car.set_camera_servo1_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_pan_angle(0)
+    car.set_cam_tilt_angle(0)
     car.set_dir_servo_angle(0)
 
 def depressed(car):
     """Sad posture sequence."""
     for angle in [-10, -20, -15, -25, -10]:
-        car.set_camera_servo2_angle(angle)
+        car.set_cam_tilt_angle(angle)
         time.sleep(0.4)
     time.sleep(1.0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_tilt_angle(0)
 
 def spin_around(car, speed=30):
     """Spin the car around (360-ish)."""
@@ -219,20 +219,20 @@ def patrol(car, speed=25, duration=5.0):
     angle = 0
     direction = 1
     while time.time() < end_time:
-        car.set_camera_servo1_angle(angle)
+        car.set_cam_pan_angle(angle)
         angle += 5 * direction
         if angle > 45 or angle < -45:
             direction *= -1
         time.sleep(0.1)
     car.stop()
-    car.set_camera_servo1_angle(0)
+    car.set_cam_pan_angle(0)
 
 def reset_position(car):
     """Reset all servos to center and stop motors."""
     car.stop()
     car.set_dir_servo_angle(0)
-    car.set_camera_servo1_angle(0)
-    car.set_camera_servo2_angle(0)
+    car.set_cam_pan_angle(0)
+    car.set_cam_tilt_angle(0)
 
 
 # ─────────────────────────────────────────────────────────────

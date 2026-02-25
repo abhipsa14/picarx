@@ -75,10 +75,12 @@ LINE_TRACK_SPEED = 10           # Slower speed for line tracking
 LINE_TRACK_OFFSET = 20          # Steering angle offset for tracking
 
 # ─────────────────────────────────────────────────────────────
-# SOUND FILES (relative to picar-x install directory)
+# SOUND FILES (auto-detect user home directory)
 # ─────────────────────────────────────────────────────────────
-SOUND_DIR = "/home/pi/picar-x/sounds"
-MUSIC_DIR = "/home/pi/picar-x/musics"
+import os as _os
+_USER_HOME = _os.path.expanduser("~")
+SOUND_DIR = _os.path.join(_USER_HOME, "picar-x", "sounds")
+MUSIC_DIR = _os.path.join(_USER_HOME, "picar-x", "musics")
 HORN_SOUND = "car-double-horn.wav"
 ENGINE_SOUND = "car-start-engine.wav"
 

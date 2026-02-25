@@ -590,8 +590,8 @@ def main():
         try:
             car.stop()
             car.set_dir_servo_angle(0)
-            car.set_camera_servo1_angle(0)
-            car.set_camera_servo2_angle(0)
+            car.set_cam_pan_angle(0)
+            car.set_cam_tilt_angle(0)
         except Exception:
             pass
         try:
