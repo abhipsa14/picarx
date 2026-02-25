@@ -302,32 +302,32 @@ def turn_right(car, speed=30, angle=25, duration=1.0):
 def stop(car):
     car.stop(); car.set_dir_servo_angle(0)
 def look_left(car, angle=60):
-    car.set_camera_servo1_angle(angle); time.sleep(0.5)
+    car.set_cam_pan_angle(angle); time.sleep(0.5)
 def look_right(car, angle=60):
-    car.set_camera_servo1_angle(-angle); time.sleep(0.5)
+    car.set_cam_pan_angle(-angle); time.sleep(0.5)
 def look_up(car, angle=30):
-    car.set_camera_servo2_angle(angle); time.sleep(0.5)
+    car.set_cam_tilt_angle(angle); time.sleep(0.5)
 def look_down(car, angle=30):
-    car.set_camera_servo2_angle(-angle); time.sleep(0.5)
+    car.set_cam_tilt_angle(-angle); time.sleep(0.5)
 def look_center(car):
-    car.set_camera_servo1_angle(0); car.set_camera_servo2_angle(0); time.sleep(0.3)
+    car.set_cam_pan_angle(0); car.set_cam_tilt_angle(0); time.sleep(0.3)
 def nod(car):
-    for a in [20,-10,15,-5,0]: car.set_camera_servo2_angle(a); time.sleep(0.2)
+    for a in [20,-10,15,-5,0]: car.set_cam_tilt_angle(a); time.sleep(0.2)
 def shake_head(car):
-    for a in [30,-30,20,-20,10,-10,0]: car.set_camera_servo1_angle(a); time.sleep(0.12)
+    for a in [30,-30,20,-20,10,-10,0]: car.set_cam_pan_angle(a); time.sleep(0.12)
 def celebrate(car):
-    car.set_camera_servo2_angle(20)
+    car.set_cam_tilt_angle(20)
     for _ in range(2):
-        car.set_camera_servo1_angle(-30); car.set_dir_servo_angle(-20); time.sleep(0.2)
-        car.set_camera_servo1_angle(30); car.set_dir_servo_angle(20); time.sleep(0.2)
-    car.set_camera_servo1_angle(0); car.set_camera_servo2_angle(0); car.set_dir_servo_angle(0)
+        car.set_cam_pan_angle(-30); car.set_dir_servo_angle(-20); time.sleep(0.2)
+        car.set_cam_pan_angle(30); car.set_dir_servo_angle(20); time.sleep(0.2)
+    car.set_cam_pan_angle(0); car.set_cam_tilt_angle(0); car.set_dir_servo_angle(0)
 def dance(car):
     for _ in range(2):
         car.set_dir_servo_angle(25); car.forward(20); time.sleep(0.3)
         car.set_dir_servo_angle(-25); time.sleep(0.3)
     car.stop(); car.set_dir_servo_angle(0); celebrate(car)
 def reset_position(car):
-    car.stop(); car.set_dir_servo_angle(0); car.set_camera_servo1_angle(0); car.set_camera_servo2_angle(0)
+    car.stop(); car.set_dir_servo_angle(0); car.set_cam_pan_angle(0); car.set_cam_tilt_angle(0)
 
 ACTIONS_DICT = {
     "forward": forward, "go forward": forward, "move forward": forward,

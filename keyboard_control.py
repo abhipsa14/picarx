@@ -504,19 +504,22 @@ def keyboard_listener(car, state, tts_func, play_sound_func, music,
                       start_line_tracking, start_obstacle_avoidance):
     """
     Main keyboard listener — auto-selects TTY or evdev backend.
+    Priority: evdev first (works everywhere), then TTY as fallback.
     """
     dispatch = _make_dispatcher(car, state, play_sound_func, music,
                                 start_line_tracking, start_obstacle_avoidance)
 
-    if _has_tty():
-        _tty_listener(car, state, dispatch)
-    elif _has_evdev():
-        logger.info("No TTY detected — using evdev for keyboard input (systemd mode).")
+    # Try evdev first (works both with and without TTY)
+    if _has_evdev():
+        logger.info("Using evdev for keyboard input (universal mode).")
         _evdev_listener(car, state, dispatch)
+    elif _has_tty():
+        logger.info("evdev not available — using TTY mode (requires interactive terminal).")
+        _tty_listener(car, state, dispatch)
     else:
-        logger.info("Keyboard control: No TTY and evdev not installed. "
-                     "Keyboard input disabled. To enable under systemd, "
-                     "install evdev: sudo pip3 install evdev")
+        logger.warning("Keyboard control DISABLED: No TTY and evdev not installed.")
+        logger.warning("To enable keyboard in systemd service, install evdev:")
+        logger.warning("  sudo pip3 install evdev --break-system-packages")
 
 
 def start_keyboard_thread(car, state, tts_func, play_sound_func, music,
